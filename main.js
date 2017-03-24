@@ -76,6 +76,7 @@ function Simulation(npoints, length, imp) {
   this.dx = length/npoints;
   this.imp = imp;
   this.t = 0;
+  this.loss = 0.001;
 }
 
 Simulation.prototype.update = function(dt) {
@@ -83,13 +84,16 @@ Simulation.prototype.update = function(dt) {
 
   var v = 1.0;
   var c = this.dx/dt*v;
+  var cl = (1-this.loss)/(1+this.loss);
   for (var i = 0; i < this.npoints-1; i++) {
-    this.current[i] -= c*(dt/this.dx)*(this.voltage[i+1] - this.voltage[i])/this.imp;
+    //this.current[i] += (dt/this.dx)*(this.voltage[i+1] - this.voltage[i])/this.imp;
+    this.current[i] = cl*this.current[i] + (1/this.imp)*(this.voltage[i+1] - this.voltage[i])/(this.loss+1);
   }
   for (var i = 1; i < this.npoints; i++) {
-    this.voltage[i] -= c*(dt/this.dx)*(this.current[i] - this.current[i-1])*this.imp;
+    //this.voltage[i] += (dt/this.dx)*(this.current[i] - this.current[i-1])*this.imp;
+    this.voltage[i] = cl*this.voltage[i] + this.imp*(this.current[i] - this.current[i-1])/(this.loss+1);
   }
-  this.voltage[250] = this.source(this.t);
+  this.voltage[Math.floor(this.npoints/2)] = this.source(this.t);
 }
 
 Simulation.prototype.source = function(t) {
@@ -110,7 +114,7 @@ var last = now;
 function tick() {
   now = window.performance.now();
   var dt = now-last;
-  dt = (dt > 100 ? 10 : dt)*1e-9;
+  dt = (dt > 100 ? 1 : dt)*1e-9;
 
   sim.update(dt);
   ctx.clearRect(0, 0, canvas.width, canvas.height);

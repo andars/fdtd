@@ -1,7 +1,9 @@
 'use strict';
 
 var canvas = document.querySelector('#plot');
+canvas.width = window.innerWidth*0.98;
 var ctx = canvas.getContext('2d');
+
 
 ctx.strokeStyle='black';
 
@@ -79,7 +81,7 @@ function Simulation(dt, length, v) {
   this.imp = new Float32Array(this.npoints);
 
   for (var i = 0; i<this.npoints; i++) {
-    this.imp[i] = 10;
+    this.imp[i] = i < this.npoints/2 ? 40 : 10;
   }
 
   this.c = v*dt/this.dx;

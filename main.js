@@ -72,7 +72,7 @@ function plot(v, c) {
 
 function Simulation(dt, length, v) {
   var k = v*dt;
-  this.dx = k;
+  this.dx = 3*k;
   this.length = length;
   this.npoints = Math.ceil(this.length/this.dx);
 
@@ -81,7 +81,7 @@ function Simulation(dt, length, v) {
   this.imp = new Float32Array(this.npoints);
 
   for (var i = 0; i<this.npoints; i++) {
-    this.imp[i] = i < this.npoints/2 ? 40 : 10;
+    this.imp[i] = i < this.npoints/3 ? 10 : 30;
   }
 
   this.c = v*dt/this.dx;

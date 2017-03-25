@@ -1,3 +1,5 @@
+'use strict';
+
 var canvas = document.querySelector('#plot');
 var ctx = canvas.getContext('2d');
 
@@ -27,13 +29,11 @@ function min(xs) {
   return min;
 }
 
-
 function transform(x,y) {
   //ctx.scale(canvas.width/(max(x)-min(x)), -canvas.height/(2*(max(y))-min(y)));
   ctx.scale(canvas.width/(max(x)-min(x)), -canvas.height/4);
   ctx.translate(0, -2);
 }
-
 
 function plot(v, c) {
     // draw x axis
@@ -68,55 +68,69 @@ function plot(v, c) {
     ctx.stroke();
 }
 
-function Simulation(npoints, length, imp) {
-  this.npoints = npoints;
-  this.voltage = new Float32Array(npoints);
-  this.current = new Float32Array(npoints);
+function Simulation(dt, length, v) {
+  var k = v*dt;
+  this.dx = k;
   this.length = length;
-  this.dx = length/npoints;
-  this.imp = imp;
+  this.npoints = Math.ceil(this.length/this.dx);
+
+  this.voltage = new Float32Array(this.npoints);
+  this.current = new Float32Array(this.npoints-1);
+  this.imp = new Float32Array(this.npoints);
+
+  for (var i = 0; i<this.npoints; i++) {
+    this.imp[i] = 10;
+  }
+
+  this.c = v*dt/this.dx;
+  console.log('Courant: ' + this.c);
+
   this.t = 0;
-  this.loss = 0.001;
 }
 
 Simulation.prototype.update = function(dt) {
   this.t += dt;
 
-  var v = 1.0;
-  var c = this.dx/dt*v;
-  var cl = (1-this.loss)/(1+this.loss);
   for (var i = 0; i < this.npoints-1; i++) {
-    //this.current[i] += (dt/this.dx)*(this.voltage[i+1] - this.voltage[i])/this.imp;
-    this.current[i] = cl*this.current[i] + (1/this.imp)*(this.voltage[i+1] - this.voltage[i])/(this.loss+1);
+    this.current[i] -= this.c/this.imp[i]*(this.voltage[i+1] - this.voltage[i]);
   }
-  for (var i = 1; i < this.npoints; i++) {
-    //this.voltage[i] += (dt/this.dx)*(this.current[i] - this.current[i-1])*this.imp;
-    this.voltage[i] = cl*this.voltage[i] + this.imp*(this.current[i] - this.current[i-1])/(this.loss+1);
+
+  this.voltage[0] = this.source(this.t);
+
+  for (var i = 1; i < this.npoints-1; i++) {
+    this.voltage[i] -= this.c*this.imp[i]*(this.current[i] - this.current[i-1]);
   }
-  this.voltage[Math.floor(this.npoints/2)] = this.source(this.t);
 }
 
 Simulation.prototype.source = function(t) {
   var center = 3e-6;
   var width = 1e-6;
+
   return Math.exp(-Math.pow((t - center)/width, 2));
-  if (center - width <= t && t <= center + width) {
-    return 1;
-  } else {
-    return 0;
-  }
 }
 
-var sim = new Simulation(500, 1e3, 10);
+var dt = 5e-9;
+var len = 1;
+var vp = 1e5;
+var sim = new Simulation(dt, len, vp);
+
+var slack = 0;
 var now = window.performance.now();
 var last = now;
 
 function tick() {
   now = window.performance.now();
-  var dt = now-last;
-  dt = (dt > 100 ? 1 : dt)*1e-9;
+  var delta = now-last;
+  delta = delta > 100 ? 10 : delta;
+  slack += delta*1e-9;
 
-  sim.update(dt);
+  var ticks = 0;
+  while (slack > dt) {
+    ticks++;
+    sim.update(dt);
+    slack -= dt;
+  }
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.beginPath();
   plot(sim.voltage, sim.current);

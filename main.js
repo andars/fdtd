@@ -4,6 +4,11 @@ var canvas = document.querySelector('#plot');
 canvas.width = window.innerWidth*0.98;
 var ctx = canvas.getContext('2d');
 
+var time_p = document.querySelector('#time');
+var power_p = document.querySelector('#input_power');
+var input_energy_p = document.querySelector('#input_energy');
+var line_energy_p = document.querySelector('#line_energy');
+
 
 ctx.strokeStyle='black';
 
@@ -81,6 +86,17 @@ function plot(v, c) {
     ctx.restore();
     ctx.strokeStyle='red';
     ctx.stroke();
+
+    if (sim.t - sim.last_report > 100e-9) {
+        var line_energy = sim.magnetic_energy + sim.electric_energy;
+
+        time_p.innerHTML = 'Simulation time: ' + Math.round(sim.t * 1e9);
+        power_p.innerHTML = 'Input power: ' + Math.round(sim.input_power * 1000);
+        input_energy_p.innerHTML = 'Input energy: ' + Math.round(sim.input_energy * 1e9);
+        line_energy_p.innerHTML = 'Line energy: ' + Math.round(line_energy * 1e9);
+
+        sim.last_report = sim.t;
+    }
 }
 
 function Simulation(dt, length, v) {
@@ -108,44 +124,29 @@ function Simulation(dt, length, v) {
 }
 
 Simulation.prototype.report_energy = function() {
-    if (this.t - this.last_report > 5000e-9) {
-        console.log('energy at', this.t);
-        this.last_report = this.t;
+    // c = 1 / sqrt(L * C)
+    // Z = sqrt(L / C)
+    //
+    // Z/c = sqrt(L) / sqrt(C) * sqrt(L) * sqrt(C) = L
+    // 1/(c * Z) = sqrt(L) * sqrt(C) * sqrt(C) / sqrt(L) = C
 
-        // c = 1 / sqrt(L * C)
-        // Z = sqrt(L / C)
-        //
-        // Z/c = sqrt(L) / sqrt(C) * sqrt(L) * sqrt(C) = L
-        // 1/(c * Z) = sqrt(L) * sqrt(C) * sqrt(C) / sqrt(L) = C
+    var magnetic_energy = 0;
 
-        var magnetic_energy = 0;
-
-        for (var i = 0; i < this.npoints - 1; i++) {
-            var inductance_per_length = this.imp[i]/this.vp;
-            var segment_energy = 0.5 * this.dx * inductance_per_length * this.current[i] ** 2;
-            magnetic_energy += segment_energy;
-
-            if (isNaN(magnetic_energy)) {
-                console.log(i);
-                console.log(segment_energy);
-            }
-        }
-
-        var electric_energy = 0;
-        for (var i = 0; i < this.npoints; i++) {
-            var capacitance_per_length = 1/(this.imp[i] * this.vp);
-            var segment_energy = 0.5 * this.dx * capacitance_per_length * this.voltage[i] ** 2;
-            electric_energy += segment_energy;
-
-            if (isNaN(electric_energy)) {
-                console.log(i);
-                console.log(segment_energy);
-            }
-        }
-        console.log(magnetic_energy, electric_energy);
-        console.log('total energy ' + (magnetic_energy + electric_energy));
-        console.log('input energy ' + this.input_energy);
+    for (var i = 0; i < this.npoints - 1; i++) {
+        var inductance_per_length = this.imp[i]/this.vp;
+        var segment_energy = 0.5 * this.dx * inductance_per_length * this.current[i] ** 2;
+        magnetic_energy += segment_energy;
     }
+
+    var electric_energy = 0;
+    for (var i = 0; i < this.npoints; i++) {
+        var capacitance_per_length = 1/(this.imp[i] * this.vp);
+        var segment_energy = 0.5 * this.dx * capacitance_per_length * this.voltage[i] ** 2;
+        electric_energy += segment_energy;
+    }
+
+    this.magnetic_energy = magnetic_energy;
+    this.electric_energy = electric_energy;
 }
 
 Simulation.prototype.update = function(dt) {
@@ -161,8 +162,8 @@ Simulation.prototype.update = function(dt) {
     this.voltage[i] -= this.c*this.imp[i]*(this.current[i] - this.current[i-1]);
   }
 
-  var input_power = this.voltage[0]*this.current[0];
-  this.input_energy += input_power * dt;
+  this.input_power = this.voltage[0]*this.current[0];
+  this.input_energy += this.input_power * dt;
 
   this.report_energy();
 }

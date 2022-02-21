@@ -38,15 +38,27 @@ function transform(x,y) {
 }
 
 function plot(v, c) {
+    var x = linspace(0,1,sim.npoints);
+
+    ctx.save();
+    transform(x, v);
+    ctx.fillStyle = 'green';
+    ctx.globalAlpha = 0.2;
+    var max = Math.ceil(sim.npoints/3) * 1/(sim.npoints - 1);
+    ctx.fillRect(  0, -2, max, 4);
+    ctx.globalAlpha = 0.4;
+    ctx.fillRect(max, -2,   1, 4);
+    ctx.restore();
+
     // draw x axis
     ctx.save();
-    var x = linspace(0,1,sim.npoints);
     transform(x,v);
     ctx.moveTo(-100,0);
     ctx.lineTo(100,0);
     ctx.restore(); ctx.strokeStyle='black';
     ctx.stroke();
 
+    // plot voltage
     ctx.save();
     transform(x,v);
     ctx.beginPath();
@@ -58,6 +70,7 @@ function plot(v, c) {
     ctx.strokeStyle='blue';
     ctx.stroke();
 
+    // plot current
     ctx.save();
     transform(x,v);
     ctx.beginPath();

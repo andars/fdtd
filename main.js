@@ -51,7 +51,7 @@ function plot(v, c) {
     ctx.globalAlpha = 0.2;
     var max = Math.ceil(sim.npoints/3) * 1/(sim.npoints - 1);
     ctx.fillRect(  0, -2, max, 4);
-    ctx.globalAlpha = 0.4;
+    ctx.globalAlpha = 0.3;
     ctx.fillRect(max, -2,   1, 4);
     ctx.restore();
 

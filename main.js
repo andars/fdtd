@@ -55,6 +55,14 @@ function plot(v, c) {
     ctx.fillRect(max, -2,   1, 4);
     ctx.restore();
 
+    ctx.save();
+    ctx.fillStyle = 'black';
+    ctx.globalAlpha = 1;
+    ctx.font = '14px serif';
+    ctx.fillText('Z₀ = 10 Ω', 0.01 * canvas.width, 0.98*canvas.height)
+    ctx.fillText('Z₀ = 30 Ω', (max + 0.01) * canvas.width, 0.98*canvas.height)
+    ctx.restore();
+
     // draw x axis
     ctx.save();
     transform(x,v);

@@ -85,6 +85,7 @@ function plot(v, c) {
 
 function Simulation(dt, length, v) {
   var k = v*dt;
+  this.vp = v;
   this.dx = 3*k;
   this.length = length;
   this.npoints = Math.ceil(this.length/this.dx);
@@ -101,6 +102,50 @@ function Simulation(dt, length, v) {
   console.log('Courant: ' + this.c);
 
   this.t = 0;
+  this.last_report = -1;
+  this.input_energy = 0;
+  console.log(this.dx + ' ' + this.npoints);
+}
+
+Simulation.prototype.report_energy = function() {
+    if (this.t - this.last_report > 5000e-9) {
+        console.log('energy at', this.t);
+        this.last_report = this.t;
+
+        // c = 1 / sqrt(L * C)
+        // Z = sqrt(L / C)
+        //
+        // Z/c = sqrt(L) / sqrt(C) * sqrt(L) * sqrt(C) = L
+        // 1/(c * Z) = sqrt(L) * sqrt(C) * sqrt(C) / sqrt(L) = C
+
+        var magnetic_energy = 0;
+
+        for (var i = 0; i < this.npoints - 1; i++) {
+            var inductance_per_length = this.imp[i]/this.vp;
+            var segment_energy = 0.5 * this.dx * inductance_per_length * this.current[i] ** 2;
+            magnetic_energy += segment_energy;
+
+            if (isNaN(magnetic_energy)) {
+                console.log(i);
+                console.log(segment_energy);
+            }
+        }
+
+        var electric_energy = 0;
+        for (var i = 0; i < this.npoints; i++) {
+            var capacitance_per_length = 1/(this.imp[i] * this.vp);
+            var segment_energy = 0.5 * this.dx * capacitance_per_length * this.voltage[i] ** 2;
+            electric_energy += segment_energy;
+
+            if (isNaN(electric_energy)) {
+                console.log(i);
+                console.log(segment_energy);
+            }
+        }
+        console.log(magnetic_energy, electric_energy);
+        console.log('total energy ' + (magnetic_energy + electric_energy));
+        console.log('input energy ' + this.input_energy);
+    }
 }
 
 Simulation.prototype.update = function(dt) {
@@ -115,6 +160,11 @@ Simulation.prototype.update = function(dt) {
   for (var i = 1; i < this.npoints-1; i++) {
     this.voltage[i] -= this.c*this.imp[i]*(this.current[i] - this.current[i-1]);
   }
+
+  var input_power = this.voltage[0]*this.current[0];
+  this.input_energy += input_power * dt;
+
+  this.report_energy();
 }
 
 Simulation.prototype.source = function(t) {
